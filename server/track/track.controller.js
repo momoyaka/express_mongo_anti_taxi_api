@@ -2,7 +2,7 @@ const Track = require('./track.model')
 const User = require('../user/user.model');
 const APIError = require('../helpers/APIError');
 const httpStatus = require('http-status');
-const { UserRole, UserState } = require('../helpers/Enums');
+const { UserRole, UserState, TrackState } = require('../helpers/Enums');
 /**
  * Load user and append to req.
  */
@@ -92,16 +92,15 @@ function update(req, res, next) {
 }
 
 async function depart(req, res, next) {
-  const userId = req.user.id;
-  const trackId = req.params.trackId;
 
-  if( !(await Track.isUserDriverOfTrack(userId, trackId)) ) next(new APIError('user is not driver of this track', httpStatus.METHOD_NOT_ALLOWED));
+  const track = req.track;
 
-  const track = Track.get(trackId);
+  if( track.driver !=  req.owner.id ) return next(new APIError('user is not driver of this track', httpStatus.METHOD_NOT_ALLOWED));
 
-  if(track.passenger === undefined) next(new APIError('can`t depart without passenger', httpStatus.METHOD_NOT_ALLOWED));
+  if(track.passenger === undefined) return next(new APIError('can`t depart without passenger', httpStatus.METHOD_NOT_ALLOWED));
+  if(track.state !== TrackState.WAITING_DEPARTURE) return next(new APIError(`can't depart from state ${track.state}`, httpStatus.METHOD_NOT_ALLOWED));
 
-  track.state = 'Active';
+  track.state = TrackState.ACTIVE;
 
   const driver = await User.get(track.driver);
   const passenger = await User.get(track.passenger);
@@ -112,7 +111,35 @@ async function depart(req, res, next) {
   const sD = await driver.save().catch(e => next(e));
   const sP = await passenger.save().catch(e => next(e));
  
-  const sT = await track.save()
+  
+  const sT = await track.save().catch(e => next(e));
+
+  res.json({
+    newDriverState:sD.state,
+    newPassengerState:sP.state,
+    track:sT,
+  })
+}
+
+async function finish(req, res, next) {
+
+  const track = req.track;
+
+  if( track.driver !=  req.owner.id && track.passenger !=  req.owner.id ) return  next(new APIError('user is not participant of this track', httpStatus.METHOD_NOT_ALLOWED));
+  if( track.state !== TrackState.ACTIVE) return next(new APIError(`can't finish from state ${track.state}`, httpStatus.METHOD_NOT_ALLOWED));
+
+  track.state = TrackState.FINISHED;
+
+  const driver = await User.get(track.driver);
+  const passenger = await User.get(track.passenger);
+
+  driver.state = UserState.FREE;
+  passenger.state = UserState.FREE;
+
+  const sD = await driver.save().catch(e => next(e));
+  const sP = await passenger.save().catch(e => next(e));
+ 
+  const sT = await track.save().catch(e => next(e));
 
   res.json({
     newDriverState:sD.state,
@@ -120,6 +147,8 @@ async function depart(req, res, next) {
     track:sT,
   })
 }
+
+
 
 
 
@@ -137,23 +166,110 @@ function list(req, res, next) {
 }
 
 /**
- * Delete user.
- * @returns {User}
+ * Delete track.
+ * @returns {Track}
  */
-function remove(req, res, next) {
-  const user = req.user;
-  user.remove()
-    .then(deletedUser => res.json(deletedUser))
+async function remove(req, res, next) {
+  const track = req.track;
+
+  if(req.owner.id != track.driver) return next(new APIError("user is not driver", httpStatus.METHOD_NOT_ALLOWED));
+  const driver = await User.get(req.owner.id).catch(e => next(e));
+  const passenger = await User.get(track.passenger).catch(e => next(e));
+
+  driver.state = UserState.FREE;
+  passenger.state =UserState.FREE;
+
+  track.deleteOne()
+    .then( async (deletedTrack) => {
+
+      const sD = await driver.save().catch(e => next(e));
+      const sP = await passenger.save().catch(e => next(e));
+
+      res.json({
+        newDriverState: sD.state,
+        newPassengerState: sP.state,
+        track: deletedTrack,
+      })
+      
+    })
     .catch(e => next(e));
 }
 
-async function addpassenger(req, res, next){
+async function addPassenger(req, res, next){
 
-  if(req.user.role !== UserRole.PASSENGER) next(new APIError("user is not passenger", httpStatus.METHOD_NOT_ALLOWED));
+  const track = req.track;
 
-  const passenger = await User.get(req.user.id).catch(e => next(e));
+  if(track.passenger !== undefined) return next(new APIError("track has passenger", httpStatus.METHOD_NOT_ALLOWED));
+  if(req.owner.role !== UserRole.PASSENGER) return next(new APIError("user is not passenger", httpStatus.METHOD_NOT_ALLOWED));
 
-  
+  const passenger = await User.get(req.owner.id).catch(e => next(e));
+  if(passenger.state !== UserState.FREE) return next(new APIError("user already on track", httpStatus.METHOD_NOT_ALLOWED));
+
+
+  track.passenger = passenger._id;
+  track.state = TrackState.WAITING_DEPARTURE;
+  passenger.state = UserState.ON_TRACK_WAITING;
+
+  track.save()
+  .then(async (saved) => {
+    const savedP = await passenger.save().catch(e => next(e));
+ 
+    res.json(
+    {
+      newPassengerState: savedP.state,
+      track:saved
+    }
+  )})
+  .catch(e => next(e));
 }
 
-module.exports = { load, get, create, update, list, remove, getByUser, depart, addpassenger };
+async function removePassenger(req, res, next){
+
+  const track = req.track;
+
+  if(track.state !== TrackState.WAITING_DEPARTURE) return next(new APIError(`can't remove passanger from state ${track.state}`, httpStatus.METHOD_NOT_ALLOWED));
+  if(req.owner.role !== UserRole.PASSENGER) return next(new APIError("user is not passenger", httpStatus.METHOD_NOT_ALLOWED));
+  if(req.owner.id != track.passenger) return next(new APIError("wrong passenger", httpStatus.METHOD_NOT_ALLOWED));
+
+  const passenger = await User.get(req.owner.id).catch(e => next(e));
+
+  track.passenger = undefined;
+  track.state = TrackState.WAITING_PASSENGER;
+  track.passengerComment = "";
+  passenger.state = UserState.FREE;
+
+  const savedP = await passenger.save().catch(e => next(e));
+  track.save()
+  .then(saved=>res.json(
+    {
+      newPassengerState: savedP.state,
+      track:saved
+    }
+  ))
+  .catch(e => next(e));
+}
+
+async function comment(req, res, next){
+
+  const track = req.track;
+
+  const isPassenger = req.owner.id == track.passenger;
+  const isDriver = req.owner.id == track.driver;
+
+  if( !isPassenger && !isDriver ) return next(new APIError("user is not participating", httpStatus.METHOD_NOT_ALLOWED));
+
+  const comment = req.body.comment;
+
+  if(isPassenger) {
+    track.passengerComment = comment;
+  }
+  if(isDriver) {
+    track.driverComment = comment;
+  }
+
+  track.save()
+  .then(saved=>res.json(saved))
+  .catch(e => next(e));
+}
+
+module.exports = { load, get, create, update, list, remove, getByUser, depart, finish, addPassenger , removePassenger, comment};

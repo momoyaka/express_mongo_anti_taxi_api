@@ -23,7 +23,7 @@ router.route('/:trackId')
   .put(validate(paramValidation.updateTrack),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.update)
 
   /** DELETE /api/users/:userId - Delete user */
-  .delete(trackCtrl.remove);
+  .delete(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.remove);
 
    
 router.route('/get_my_track')
@@ -33,13 +33,17 @@ router.route('/get_my_track')
 router.route('/:trackId/depart')
   .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.depart);
 
+  router.route('/:trackId/finish')
+  .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.finish);
+
 router.route('/:trackId/add_passenger')
-  .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.addpassenger);
+  .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.addPassenger);
 
-// router.route('/:trackId/remove_passenger')
-//   .post(expressJwt({ secret : config.jwtSecret }), trackCtrl.removepassenger);
+router.route('/:trackId/remove_passenger')
+  .post(expressJwt({ secret : config.jwtSecret,userProperty: 'owner'}), trackCtrl.removePassenger);
 
-
+router.route('/:trackId/comment')
+  .post(validate(paramValidation.trackComment),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.comment);
 
 /** Load user when API with userId route parameter is hit */
 router.param('trackId', trackCtrl.load);

@@ -34,6 +34,10 @@ const TrackSchema = new mongoose.Schema({
       values : TrackStates,
       message : "Invalid state.",
     },
+    set: function(state) {
+        this._previousState = this.state;
+        return state;
+    },
     default: TrackState.WAITING_PASSENGER,
   },
   maxSeats: { 
@@ -66,30 +70,30 @@ const TrackSchema = new mongoose.Schema({
  * - virtuals
  */
 
-TrackSchema.pre('save', async function (next) {
-    try {
-        // Check if the driver has at least one not FINISHED track
+// TrackSchema.pre('save', async function (next) {
+//     try {
+//         // Check if the driver has at least one not FINISHED track
         
-        const existingActiveTrack = await this.constructor.findOne({
-            driver: this.driver,
-            departureTime: { $gt: new Date() } // Check for tracks with future departure times
-          });
+//         const existingActiveTrack = await this.constructor.findOne({
+//             driver: this.driver,
+//             departureTime: { $gt: new Date() } // Check for tracks with future departure times
+//           });
     
-        if (existingActiveTrack) {
-          const errorMessage = 'Driver already has an active track.';
-          return next(new APIError(errorMessage, httpStatus.METHOD_NOT_ALLOWED));
-        }
+//         if (existingActiveTrack) {
+//           const errorMessage = 'Driver already has an active track.';
+//           return next(new APIError(errorMessage, httpStatus.METHOD_NOT_ALLOWED));
+//         }
     
-        next();
-      } catch (error) {
-        next(error);
-      }
-});
+//         next();
+//       } catch (error) {
+//         next(error);
+//       }
+// });
 
 TrackSchema.pre('save', function (next) {
-    const currentState = this.state;
-    const isFinished = currentState === TrackState.FINISHED;
-    const isEditingAllowed = currentState === TrackState.ACTIVE || currentState === TrackState.WAITING_PASSENGER;
+    const currentState = this._previousState;
+    const isFinished = this.state === TrackState.FINISHED;
+    const isEditingAllowed = currentState === TrackState.ACTIVE || currentState === TrackState.WAITING_PASSENGER || currentState === TrackState.WAITING_DEPARTURE;
   
     if (this.isModified('state') && !isEditingAllowed) {
       const errorMessage = `Cannot change state from ${currentState}.`;
@@ -103,7 +107,15 @@ TrackSchema.pre('save', function (next) {
     next();
 });
 
-
+TrackSchema.pre('deleteOne',  { document: true } ,function (next) {
+    const currentState = this.state;
+    const isRemovingAllowed = currentState === TrackState.WAITING_PASSENGER || currentState === TrackState.WAITING_DEPARTURE;
+    if (!isRemovingAllowed) {
+      const errorMessage = 'Delete not allowed from current state';
+      return next(new Error(errorMessage));
+    }
+    next();
+});
 
 TrackSchema.plugin(uniqueValidator);
 /**

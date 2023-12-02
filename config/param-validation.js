@@ -87,4 +87,7 @@ module.exports = {
     }
 
   },
+  trackComment:{
+    comment:Joi.string().max(1000).required(),
+  },
 };
