@@ -2,6 +2,7 @@ const Track = require('./track.model')
 const User = require('../user/user.model');
 const APIError = require('../helpers/APIError');
 const httpStatus = require('http-status');
+const { UserRole, UserState } = require('../helpers/Enums');
 /**
  * Load user and append to req.
  */
@@ -23,32 +24,57 @@ function get(req, res) {
 }
 
 /**
+ * Get track
+ * @returns {Track}
+ */
+function getByUser(req, res) {
+  Track.getActiveByUser(req.user.id)
+  .then( track => res.json(track))
+  .catch( e => next(e) )
+}
+
+/**
  * Create new track
  * @returns {Track}
  * 
  */
-function create(req, res, next) {
+async function create(req, res, next) {
 
-  const driver = User.findById(req.user.id).catch(e => next(e));
+  const driver = await User.get(req.owner.id).catch(e => next(e));
 
-  if (driver.role !== "ROLE_DRIVER") next(new APIError("User is not driver", httpStatus.METHOD_NOT_ALLOWED));
+  if (driver.role !== UserRole.DRIVER) return next(new APIError("User is not driver", httpStatus.METHOD_NOT_ALLOWED));
+  if (driver.car === undefined) return next(new APIError("Driver needs a car", httpStatus.METHOD_NOT_ALLOWED));
+  if (driver.state !== UserState.FREE) return next(new APIError("Driver busy", httpStatus.METHOD_NOT_ALLOWED));
 
   const {startLocation, endLocation, departureTime, driverComment, maxSeats } = req.body;
 
 
   const newTrack = new Track({
     driver: driver._id,
-    startLocation: startLocation,
-    endLocation: endLocation,
+    startLocation: {
+      coordinates: startLocation.coordinates,
+      address: startLocation.address
+    },
+    endLocation: {
+      coordinates: endLocation.coordinates,
+      address: endLocation.address
+    },
     driverComment: driverComment,
     maxSeats: maxSeats,
     departureTime:departureTime
   });
 
-  newTrack.save()
-  .then(newTrack => res.json(newTrack))
-  .catch(e => next(e));
 
+
+  const savedTrack = await newTrack.save().catch(e => next(e));
+
+  driver.state = UserState.ON_TRACK_WAITING;
+  const savedDriver = await driver.save().catch(e => next(e));
+
+  return res.json({
+    newDriverState:savedDriver.state,
+    track: savedTrack,
+  })
 }
 
 /**
@@ -65,20 +91,37 @@ function update(req, res, next) {
     .catch(e => next(e));
 }
 
-/**
- * Update existing user
- * @property {string} req.body.phoneNumber
- * @returns {User}
- */
-async function setState(req, res, next) {
-  let user = req.user;
-  user = await User.getByPhone(user.phoneNumber);
-  user.state = req.body.newState;
+async function depart(req, res, next) {
+  const userId = req.user.id;
+  const trackId = req.params.trackId;
 
-  user.save()
-    .then(savedUser => res.json(savedUser))
-    .catch(e => next(e));
+  if( !(await Track.isUserDriverOfTrack(userId, trackId)) ) next(new APIError('user is not driver of this track', httpStatus.METHOD_NOT_ALLOWED));
+
+  const track = Track.get(trackId);
+
+  if(track.passenger === undefined) next(new APIError('can`t depart without passenger', httpStatus.METHOD_NOT_ALLOWED));
+
+  track.state = 'Active';
+
+  const driver = await User.get(track.driver);
+  const passenger = await User.get(track.passenger);
+
+  driver.state = UserState.ON_TRACK;
+  passenger.state = UserState.ON_TRACK;
+
+  const sD = await driver.save().catch(e => next(e));
+  const sP = await passenger.save().catch(e => next(e));
+ 
+  const sT = await track.save()
+
+  res.json({
+    newDriverState:sD.state,
+    newpassengerState:sP.state,
+    track:sT,
+  })
 }
+
+
 
 /**
  * Get track list.
@@ -104,4 +147,13 @@ function remove(req, res, next) {
     .catch(e => next(e));
 }
 
-module.exports = { load, get, create, update, list, remove, setState };
+async function addpassenger(req, res, next){
+
+  if(req.user.role !== UserRole.PASSENGER) next(new APIError("user is not passenger", httpStatus.METHOD_NOT_ALLOWED));
+
+  const passenger = await User.get(req.user.id).catch(e => next(e));
+
+  
+}
+
+module.exports = { load, get, create, update, list, remove, getByUser, depart, addpassenger };

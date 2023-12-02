@@ -3,21 +3,12 @@ const mongoose = require('mongoose');
 const uniqueValidator = require('mongoose-unique-validator');
 const httpStatus = require('http-status');
 const APIError = require('../helpers/APIError');
-const {AcceptedRoles,UserStates} = require('../helpers/Enums');
+const {AcceptedRoles,UserStates, UserState} = require('../helpers/Enums');
 const { rename } = require('joi/lib/types/object');
 
+const Car = require('../models/car.model');
 
 const phoneRegex = /^\d{10}$/;
-
-
-/**
- * Car Schema
- */
-const CarSchema = new mongoose.Schema({
-  model: String,
-  color:String,
-  regNumber:String,
-});
 
 
 /**
@@ -34,7 +25,6 @@ const UserSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: false,
   },
   hashPassword: {
     type: String,
@@ -53,11 +43,12 @@ const UserSchema = new mongoose.Schema({
     require:true,
     enum: {
       values : UserStates,
-      message : "Invalid state.",
+      message : 'Invalid state.',
     },
+    default: UserState.FREE,
   },
   car: {
-    type: CarSchema,
+    type: Car.schema,
     required: false,
   },
   createdAt: {
@@ -73,22 +64,23 @@ const UserSchema = new mongoose.Schema({
  * - virtuals
  */
 
-UserSchema.pre('save', async function (next) {
-  if (this.role === 'ROLE_DRIVER') {
-    if (this.car === undefined) {
-      return next(new Error('A driver must have car.'));
-    }
-  }
-  next();
-});
-
-
 UserSchema.plugin(uniqueValidator);
+
+// UserSchema.pre('save', async function (next) {
+//   // if (this.role === 'ROLE_DRIVER') {
+//   //   if (this.car === undefined) {
+//   //     return next(new APIError('A driver must have car.'));
+//   //   }
+//   // }
+//   // next();
+// });
+
+
+
 /**
  * Methods
  */
 UserSchema.method({
-
 
 
 });
@@ -111,7 +103,7 @@ UserSchema.set('toJSON', {
 UserSchema.statics = {
   /**
    * Get user
-   * @param {ObjectId} id - The objectId of user.
+   * @param {String} id - The objectId of user.
    * @returns {Promise<User, APIError>}
    */
   get(id) {
@@ -126,8 +118,8 @@ UserSchema.statics = {
       });
   },
 
-  async getByPhone(phoneNumber) {
-    return await this.findOne({ phoneNumber: phoneNumber })
+   getByPhone(phoneNumber) {
+    return this.findOne({ phoneNumber: phoneNumber })
      .exec()
      .then((user)=>{
        if (user) {

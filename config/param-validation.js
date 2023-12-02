@@ -17,8 +17,8 @@ module.exports = {
   // UPDATE /api/users/:userId
   updateUser: {
     body: {
-      username: Joi.string().required(),
-      mobileNumber: Joi.string().required()
+      username: Joi.string(),
+      role: Joi.string().valid(...AcceptedRoles),
     },
     params: {
       userId: Joi.string().hex().required()
@@ -57,7 +57,16 @@ module.exports = {
         address: Joi.string()
       }).required(),
       departureTime: Joi.date().iso().required()
+        .min(new Date(new Date().getTime()))
         .max(new Date(new Date().getTime() + 48 * 60 * 60 * 1000)) // Maximum 48 hours from now
+    }
+  },
+
+  updateTrack:{
+    params:{
+      trackId:Joi.string().hex().required(),
+    },
+    body:{
     }
   },
 
@@ -65,5 +74,17 @@ module.exports = {
     params:{
       userId:Joi.string().hex().required(),
     }
-  }
+  },
+
+  updateCar:{
+    params:{
+      userId:Joi.string().hex().required(),
+    },
+    body:{
+      model: Joi.string().required(),
+      color: Joi.string().required(),
+      regNumber: Joi.string().required(),
+    }
+
+  },
 };

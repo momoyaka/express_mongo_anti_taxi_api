@@ -13,38 +13,36 @@ router.route('/')
   .get(trackCtrl.list)
 
   /** POST /api/users - Create new user */
-  .post(validate(paramValidation.createTrack),expressJwt({ secret : config.jwtSecret }), trackCtrl.create);
+  .post(validate(paramValidation.createTrack),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.create);
 
 router.route('/:trackId')
   /** GET /api/users/:userId - Get user */
   .get(trackCtrl.get)
 
   /** PUT /api/users/:userId - Update user */
-  .put(validate(paramValidation.updateTrack),expressJwt({ secret : config.jwtSecret }), trackCtrl.update)
+  .put(validate(paramValidation.updateTrack),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.update)
 
   /** DELETE /api/users/:userId - Delete user */
   .delete(trackCtrl.remove);
 
-router.route('/get_by_user')
-  .get(validate(paramValidation.getByUser),expressJwt({ secret : config.jwtSecret }), trackCtrl.getByUser())
+   
+router.route('/get_my_track')
+  /** GET /api/tracks/get_my_track - Get list of users */
+  .get(validate(paramValidation.getByUser),expressJwt({ secret : config.jwtSecret, userPropetry: 'owner'}), trackCtrl.getByUser)
 
 router.route('/:trackId/depart')
-  .post(expressJwt({ secret : config.jwtSecret }), trackCtrl.depart);
+  .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.depart);
 
-router.route('/:trackId/add_passanger')
-  .post(expressJwt({ secret : config.jwtSecret }), trackCtrl.addPassanger);
+router.route('/:trackId/add_passenger')
+  .post(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.addpassenger);
 
-router.route('/:trackId/remove_passanger')
-  .post(expressJwt({ secret : config.jwtSecret }), trackCtrl.removePassanger);
+// router.route('/:trackId/remove_passenger')
+//   .post(expressJwt({ secret : config.jwtSecret }), trackCtrl.removepassenger);
 
 
 
 /** Load user when API with userId route parameter is hit */
 router.param('trackId', trackCtrl.load);
-
-
-router.route('/:userId/set_state')
-  .post(validate(paramValidation.setUserState), expressJwt({ secret : config.jwtSecret }), trackCtrl.setState)
 
 
 module.exports = router;

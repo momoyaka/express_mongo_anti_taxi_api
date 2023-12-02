@@ -15,10 +15,28 @@ mongoose.Promise = Promise;
 
 // connect to mongo db
 const mongoUri = config.mongo.host;
-mongoose.connect(mongoUri, { server: { socketOptions: { keepAlive: 1 } } });
+mongoose.connect(mongoUri, {  
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  keepAlive: true });
 mongoose.connection.on('error', () => {
   throw new Error(`unable to connect to database: ${mongoUri}`);
 });
+
+mongoose.connection.once('open', () => {
+  console.log('Connected to MongoDB successfully');
+  // Start your application logic here
+});
+
+const modelNames = mongoose.modelNames();
+
+// Drop all models
+
+// modelNames.forEach((modelName) => {
+//   delete mongoose.connection.models[modelName];
+// });
+
+
 
 // print mongoose logs in dev env
 if (config.mongooseDebug) {

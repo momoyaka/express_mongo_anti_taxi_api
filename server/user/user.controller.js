@@ -1,13 +1,20 @@
 const User = require('./user.model');
+const Track = require('../track/track.model');
+const Car = require('../models/car.model');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const config = require('../../config/config');
+const { UserState } = require('../helpers/Enums');
+const APIError = require('../helpers/APIError');
 
+const httpStatus = require('http-status');
 /**
  * Load user and append to req.
  */
 function load(req, res, next, id) {
   User.get(id)
     .then((user) => {
-      req.user = user; // eslint-disable-line no-param-reassign
+      req.user = user;
       return next();
     })
     .catch(e => next(e));
@@ -40,13 +47,24 @@ function create(req, res, next) {
     phoneNumber:req.body.phoneNumber,
     username: req.body.username,
     hashPassword: hashPassword,
-    state: "FREE",
+    state: UserState.FREE,
     role: req.body.role,
 
   });
   
   user.save()
-    .then(savedUser => res.json(savedUser))
+    .then(savedUser => {
+      const token = jwt.sign({
+        id: savedUser._id,
+        phoneNumber: savedUser.phoneNumber,
+        role: savedUser.role,
+      }, config.jwtSecret);
+
+      res.json({
+        token,
+        user: savedUser.toJSON(),
+      });
+    })
     .catch(e => next(e));
 }
 
@@ -57,7 +75,15 @@ function create(req, res, next) {
  */
 function update(req, res, next) {
   const user = req.user;
-  user.username = req.body.username;
+
+  const owner = req.owner
+
+  if(user._id != owner.id) return next(new APIError("Only owner can edit", httpStatus.METHOD_NOT_ALLOWED))
+
+  if(req.body.username)
+    user.username = req.body.username;
+  if(req.body.role)
+    user.role = req.body.role;
 
   user.save()
     .then(savedUser => res.json(savedUser))
@@ -70,8 +96,7 @@ function update(req, res, next) {
  * @returns {User}
  */
 async function setState(req, res, next) {
-  let user = req.user;
-  user = await User.getByPhone(user.phoneNumber);
+  const user = req.user;
   user.state = req.body.newState;
 
   user.save()
@@ -104,4 +129,45 @@ function remove(req, res, next) {
 }
 
 
-module.exports = { load, get, create, update, list, remove, setState };
+/**
+ * get user car.
+ * @returns {Car}
+ */
+async function getCar(req, res, next) {
+  if(req.user.car === undefined) return next(new APIError('User has not car', httpStatus.NOT_FOUND));
+  return res.json(req.user.car);
+}
+
+/**
+ * update driver car.
+ * @property {number} req.query.skip - Number of users to be skipped.
+ * @property {number} req.query.limit - Limit number of users to be returned.
+ */
+function updateCar(req, res, next) {
+
+  const user = req.user;
+
+  const {model, color, regNumber} = req.body;
+
+  const newCar = new Car({
+    model:model,
+    color:color,
+    regNumber:regNumber,
+  });
+
+  user.car = newCar;
+
+  user.save()
+    .then(savedUser => res.json(savedUser))
+    .catch(e => next(e));
+}
+
+
+function getActiveTrack(req, res, next){
+  Track.getActiveByUser(req.owner.id)
+  .then(track => res.json(track))
+  .catch(e => next(e));
+}
+
+
+module.exports = { load, get, create, update, list, remove, setState, getCar, updateCar, getActiveTrack};

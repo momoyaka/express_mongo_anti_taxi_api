@@ -20,13 +20,21 @@ router.route('/:userId')
   .get(userCtrl.get)
 
   /** PUT /api/users/:userId - Update user */
-  .put(validate(paramValidation.updateUser), userCtrl.update)
+  .put(validate(paramValidation.updateUser),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), userCtrl.update)
 
   /** DELETE /api/users/:userId - Delete user */
   .delete(userCtrl.remove);
 
 router.route('/:userId/set_state')
-  .post(validate(paramValidation.setUserState), expressJwt({ secret : config.jwtSecret }), userCtrl.setState);
+  .post(validate(paramValidation.setUserState), expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), userCtrl.setState);
+
+router.route('/:userId/car')
+  .get(validate(paramValidation.getByUser),userCtrl.getCar)
+  .post(expressJwt({ secret : config.jwtSecret, userProperty:'owner' }), validate(paramValidation.updateCar), userCtrl.updateCar);
+
+router.route('/:userId/active_track')
+  .get(expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), userCtrl.getActiveTrack)
+
 
 /** Load user when API with userId route parameter is hit */
 router.param('userId', userCtrl.load);

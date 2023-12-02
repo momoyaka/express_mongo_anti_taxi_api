@@ -20,7 +20,8 @@
     "test:watch": "yarn test -- --watch",
     "test:coverage": "cross-env NODE_ENV=test ./node_modules/.bin/istanbul cover _mocha -- --ui bdd --reporter spec --colors server --recursive",
     "test:check-coverage": "yarn test:coverage && istanbul check-coverage",
-    "report-coverage": "coveralls < ./coverage/lcov.info"
+    "report-coverage": "coveralls < ./coverage/lcov.info",
+    "drop-db":"node dropDB.js"
   },
   "repository": {
     "type": "git",
@@ -40,7 +41,7 @@
     "boilerplate"
   ],
   "dependencies": {
-    "bcrypt": "false5.1.1",
+    "bcrypt": "^5.1.1",
     "bluebird": "3.5.1",
     "body-parser": "1.18.2",
     "compression": "1.7.2",
@@ -57,8 +58,8 @@
     "joi": "10.6.0",
     "jsonwebtoken": "7.1.9",
     "method-override": "^2.3.10",
-    "mongoose": "4.7.4",
-    "mongoose-unique-validator": "false4.0.0",
+    "mongoose": "7.0.0",
+    "mongoose-unique-validator": "^4.0.0",
     "morgan": "1.9.0",
     "winston": "2.4.1"
   },
