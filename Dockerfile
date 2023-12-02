@@ -12,7 +12,7 @@ WORKDIR /app
 ADD package.json yarn.lock /app/
 
 # --pure-lockfile: Don’t generate a yarn.lock lockfile
-RUN yarn --pure-lockfile
+RUN npm install
 
 # copy all file from current dir to /app in container
 COPY . /app/
@@ -21,4 +21,4 @@ COPY . /app/
 EXPOSE 4040
 
 # cmd to start service
-CMD [ "yarn", "start" ]
+CMD [ "npm", "start" ]
