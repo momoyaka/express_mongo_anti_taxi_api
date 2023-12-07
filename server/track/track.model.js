@@ -210,6 +210,50 @@ TrackSchema.statics = {
       .skip(+skip)
       .limit(+limit)
       .exec();
+  },
+  /**
+   * List tracks in descending order of sum distance from given start, end coords.
+   * @param {number} skip - Number of users to be skipped.
+   * @param {number} limit - Limit number of users to be returned.
+   * @returns {Promise<Track[]>}
+   */
+  nearestList({skip = 0, limit = 50, sX = 0, sY = 0, eX, eY} = {}) {
+    return this.aggregate([
+      {
+        $match: { state: TrackState.WAITING_PASSENGER }, // Filter only tracks in the WAITING_PASSENGER state
+      },
+      {
+        $addFields: {
+          startDistance: {
+            $sqrt: {
+              $sum: [
+                { $pow: [{ $subtract: [{ $arrayElemAt: ["$startLocation.coordinates", 0] }, sX] }, 2] },
+                { $pow: [{ $subtract: [{ $arrayElemAt: ["$startLocation.coordinates", 1] }, sY] }, 2] },
+              ],
+            },
+          },
+          endDistance: {
+            $sqrt: {
+              $sum: [
+                { $pow: [{ $subtract: [{ $arrayElemAt: ["$endLocation.coordinates", 0] }, eX] }, 2] },
+                { $pow: [{ $subtract: [{ $arrayElemAt: ["$endLocation.coordinates", 1] }, eY] }, 2] },
+              ],
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          totalDistance: { $add: ["$startDistance", "$endDistance"] },
+        },
+      },
+      {
+        $sort: { totalDistance: 1 }, // Sort by total distance in ascending order
+      },
+    ])
+    .skip(skip)
+    .limit(limit)
+    .exec()
   }
 };
 

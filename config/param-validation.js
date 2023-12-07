@@ -4,6 +4,23 @@ const { UserStates, AcceptedRoles } = require('../server/helpers/Enums');
 const phoneRegex = /^\d{10}$/;
 
 module.exports = {
+
+  list: {
+    query:{
+      ipp: Joi.number().integer().positive(),
+      page: Joi.number().integer().min(0)
+    }
+  },
+
+  trackList: {
+    query:{
+      sX:Joi.number().required(),
+      sY:Joi.number().required(),
+      eX:Joi.number().required(),
+      eY:Joi.number().required(),
+    }
+  },
+
   // POST /api/users
   createUser: {
     body: {

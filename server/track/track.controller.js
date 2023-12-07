@@ -154,14 +154,29 @@ async function finish(req, res, next) {
 
 /**
  * Get track list.
- * @property {number} req.query.skip - Number of users to be skipped.
- * @property {number} req.query.limit - Limit number of users to be returned.
- * @returns {User[]}
+ * @property {number} req.query.page - Number of users to be skipped.
+ * @property {number} req.query.ipp - Limit number of users to be returned.
+ * @returns {Track[]}
  */
-function list(req, res, next) {
-  const { limit = 50, skip = 0 } = req.query;
-  User.list({ limit, skip })
-    .then(users => res.json(users))
+function nearestList(req, res, next) {
+
+  const {ipp,page, sX,sY, eX,eY} = req.query;
+
+  const limit = ipp;
+  const  skip = page*ipp 
+  Track.nearestList({ limit, skip, sX, sY, eX, eY })
+    .then(async tracks => {
+
+      const totalCount = await Track.count({ state: TrackState.WAITING_PASSENGER }).exec();
+
+      const isMore = totalCount > skip + tracks.length;
+
+      res.json({
+        totalCount:totalCount,
+        isMore: isMore,
+        tracks: tracks
+      })
+    })
     .catch(e => next(e));
 }
 
@@ -272,4 +287,4 @@ async function comment(req, res, next){
   .catch(e => next(e));
 }
 
-module.exports = { load, get, create, update, list, remove, getByUser, depart, finish, addPassenger , removePassenger, comment};
+module.exports = { load, get, create, update, nearestList, remove, getByUser, depart, finish, addPassenger , removePassenger, comment};

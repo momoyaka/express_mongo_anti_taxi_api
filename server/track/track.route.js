@@ -10,7 +10,7 @@ const router = express.Router(); // eslint-disable-line new-cap
 
 router.route('/')
   /** GET /api/tracks - Get list of users */
-  .get(trackCtrl.list)
+  .get(validate(paramValidation.list), validate(paramValidation.trackList),trackCtrl.nearestList)
 
   /** POST /api/users - Create new user */
   .post(validate(paramValidation.createTrack),expressJwt({ secret : config.jwtSecret, userProperty: 'owner'}), trackCtrl.create);
