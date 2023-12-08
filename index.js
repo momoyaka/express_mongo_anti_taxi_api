@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 const util = require('util');
+const cron = require('node-cron');
 
 // config should be imported before importing any other file
 const config = require('./config/config');
 const app = require('./config/express');
+const task = require('./server/helpers/cronjobs');
 
 const debug = require('debug')('express-mongoose-es6-rest-api:index');
 
@@ -37,6 +39,10 @@ const modelNames = mongoose.modelNames();
 // });
 
 
+cron.schedule('*/30 * * * * *', () => {
+  task();
+});
+task();
 
 // print mongoose logs in dev env
 if (config.mongooseDebug) {
