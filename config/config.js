@@ -38,7 +38,8 @@ const config = {
   mongo: {
     host: envVars.MONGO_HOST,
     port: envVars.MONGO_PORT
-  }
+  },
+  apiKey:envVars.API_KEY,
 };
 
 module.exports = config;
