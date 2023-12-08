@@ -22,8 +22,15 @@ async function login(req, res, next){
   // Ideally you'll fetch this from the db
   // Idea here was to show how jwt works with simplicity
 
-  let user = await User.getByPhone(req.body.phoneNumber);
+  let error = false;
+
+  let user = await User.getByPhone(req.body.phoneNumber).catch(e =>{
+    error = true;
+  });
+
+  if(error) return next(new APIError('Authentication error', httpStatus.UNAUTHORIZED, true)); 
   
+
 
   if (req.body.phoneNumber === user.phoneNumber && bcrypt.compareSync(req.body.password,  user.hashPassword)) {
     const token = jwt.sign({
