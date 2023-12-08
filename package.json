@@ -20,8 +20,7 @@
     "test:watch": "yarn test -- --watch",
     "test:coverage": "cross-env NODE_ENV=test ./node_modules/.bin/istanbul cover _mocha -- --ui bdd --reporter spec --colors server --recursive",
     "test:check-coverage": "yarn test:coverage && istanbul check-coverage",
-    "report-coverage": "coveralls < ./coverage/lcov.info",
-    "drop-db": "node dropDB.js"
+    "report-coverage": "coveralls < ./coverage/lcov.info"
   },
   "repository": {
     "type": "git",
