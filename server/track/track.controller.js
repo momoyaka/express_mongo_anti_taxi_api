@@ -192,20 +192,26 @@ async function remove(req, res, next) {
   const passenger = await User.get(track.passenger).catch(e => next(e));
 
   driver.state = UserState.FREE;
-  passenger.state =UserState.FREE;
+  if(passenger !== undefined) passenger.state =UserState.FREE;
 
   track.deleteOne()
     .then( async (deletedTrack) => {
 
       const sD = await driver.save().catch(e => next(e));
-      const sP = await passenger.save().catch(e => next(e));
 
-      res.json({
+      
+      if(passenger !== undefined) {const sP = await passenger.save().catch(e => next(e));
+
+        return res.json({
+          newDriverState: sD.state,
+          newPassengerState: sP.state,
+          track: deletedTrack,
+        })
+      }
+      return res.json({
         newDriverState: sD.state,
-        newPassengerState: sP.state,
         track: deletedTrack,
       })
-      
     })
     .catch(e => next(e));
 }
