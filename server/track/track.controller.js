@@ -191,7 +191,6 @@ async function remove(req, res, next) {
   const driver = await User.get(req.owner.id).catch(e => next(e));
 
   driver.state = UserState.FREE;
-  if(passenger !== undefined) 
 
   track.deleteOne()
     .then( async (deletedTrack) => {
