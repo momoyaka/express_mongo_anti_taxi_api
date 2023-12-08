@@ -189,10 +189,9 @@ async function remove(req, res, next) {
 
   if(req.owner.id != track.driver) return next(new APIError("user is not driver", httpStatus.METHOD_NOT_ALLOWED));
   const driver = await User.get(req.owner.id).catch(e => next(e));
-  const passenger = await User.get(track.passenger).catch(e => next(e));
 
   driver.state = UserState.FREE;
-  if(passenger !== undefined) passenger.state =UserState.FREE;
+  if(passenger !== undefined) 
 
   track.deleteOne()
     .then( async (deletedTrack) => {
@@ -200,7 +199,11 @@ async function remove(req, res, next) {
       const sD = await driver.save().catch(e => next(e));
 
       
-      if(passenger !== undefined) {const sP = await passenger.save().catch(e => next(e));
+      if(deletedTrack.passenger !== undefined) {
+
+        const passenger = await User.get(track.passenger);
+        passenger.state = UserState.FREE;
+        const sP = await passenger.save().catch(e => next(e));
 
         return res.json({
           newDriverState: sD.state,
