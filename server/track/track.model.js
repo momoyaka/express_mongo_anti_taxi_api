@@ -249,9 +249,13 @@ TrackSchema.statics = {
       },
       {
         $project: {
+          id: '$_id', // Rename "_id" to "id"
+        }
+      },
+      {
+        $project: {
           __v: 0, // Exclude the "__v" field
           _id: 0, // Exclude the "_id" field (set to 1 if you want to include it)
-          id: '$_id', // Rename "_id" to "id"
         }
       },
       {
