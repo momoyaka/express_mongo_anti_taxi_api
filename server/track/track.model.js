@@ -248,6 +248,24 @@ TrackSchema.statics = {
         },
       },
       {
+        $lookup: {
+          from: 'users', // Assuming the User model is stored in a collection named 'users'
+          localField: 'driver',
+          foreignField: '_id',
+          as: 'driverInfo',
+        },
+      },
+      {
+        $unwind: '$driverInfo', // If a track can have only one driver
+      },
+      {
+        $addFields: {
+          driverName: '$driverInfo.nickname',
+          driverPhone: '$driverInfo.phoneNumber',
+        },
+      },
+
+      {
         $project: {
           id: '$_id', // Rename "_id" to "id"
           driver: 1,
@@ -263,6 +281,8 @@ TrackSchema.statics = {
           startDistance: 1,
           endDistance: 1,
           totalDistance: 1,
+          driverName: 1,
+          driverPhone: 1,
         }
       },
       {
