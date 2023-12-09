@@ -260,7 +260,7 @@ TrackSchema.statics = {
       },
       {
         $addFields: {
-          driverName: '$driverInfo.nickname',
+          driverName: '$driverInfo.username',
           driverPhone: '$driverInfo.phoneNumber',
         },
       },
