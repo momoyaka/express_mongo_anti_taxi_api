@@ -4,10 +4,11 @@ const config = require('../../config/config');
 const { TrackState } = require('./Enums');
 
 // Schedule the task to run every hour
-const mongoUri = config.mongo.host;
+const mongoUri = `mongodb://${config.mongo.user}:${config.mongo.pass}@${config.mongo.host}:${config.mongo.port}/${config.mongo.db}`;
 
 const task = async function processTracks() {
-    const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+    const client = new MongoClient(mongoUri, 
+    { useNewUrlParser: true, useUnifiedTopology: true });
 
     try {
         await client.connect();

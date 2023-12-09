@@ -35,5 +35,8 @@ services:
       - mongo
   mongo:
     image: "mongo:3.6"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: momo
+      MONGO_INITDB_ROOT_PASSWORD: hohohohoho
     ports:
       - "27017:27017"

@@ -16,7 +16,7 @@ Promise = require('bluebird'); // eslint-disable-line no-global-assign
 mongoose.Promise = Promise;
 
 // connect to mongo db
-const mongoUri = config.mongo.host;
+const mongoUri = `mongodb://${config.mongo.user}:${config.mongo.pass}@${config.mongo.host}:${config.mongo.port}/${config.mongo.db}`;
 mongoose.connect(mongoUri, {  
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -39,7 +39,7 @@ const modelNames = mongoose.modelNames();
 // });
 
 
-cron.schedule('*/30 * * * * *', () => {
+cron.schedule('*/60 * * * * *', () => {
   task();
 });
 task();
