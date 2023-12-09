@@ -248,6 +248,13 @@ TrackSchema.statics = {
         },
       },
       {
+        $project: {
+          __v: 0, // Exclude the "__v" field
+          _id: 0, // Exclude the "_id" field (set to 1 if you want to include it)
+          id: '$_id', // Rename "_id" to "id"
+        }
+      },
+      {
         $sort: { totalDistance: 1 }, // Sort by total distance in ascending order
       },
     ])
