@@ -220,6 +220,11 @@ TrackSchema.statics = {
   nearestList({skip = 0, limit = 50, sX = 0, sY = 0, eX, eY} = {}) {
     return this.aggregate([
       {
+        $project: {
+          id: '$_id', // Rename "_id" to "id"
+        }
+      },
+      {
         $match: { state: TrackState.WAITING_PASSENGER }, // Filter only tracks in the WAITING_PASSENGER state
       },
       {
@@ -246,11 +251,6 @@ TrackSchema.statics = {
         $addFields: {
           totalDistance: { $add: ["$startDistance", "$endDistance"] },
         },
-      },
-      {
-        $project: {
-          id: '$_id', // Rename "_id" to "id"
-        }
       },
       {
         $project: {
