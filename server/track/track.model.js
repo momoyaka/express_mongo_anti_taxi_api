@@ -251,6 +251,7 @@ TrackSchema.statics = {
         $project: {
           id: '$_id', // Rename "_id" to "id"
           driver: 1,
+          passenger:1,
           startLocation: 1,
           endLocation: 1,
           state: 1,
